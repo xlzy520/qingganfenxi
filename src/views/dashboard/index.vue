@@ -11,15 +11,17 @@ export default {
   name: 'Dashboard',
   computed: {
     ...mapGetters([
-      'name'
+      'name',
+      'taskData'
     ])
   },
   mounted() {
-
+    this.handleData()
   },
   methods: {
     handleData() {
       fetch('./data.json').then(res=> res.json()).then(res=>{
+        this.$store.dispatch('task/change_task_data', res)
         console.log(res);
       })
     }
