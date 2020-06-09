@@ -30,7 +30,14 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // set ElementUI lang to EN
-Vue.use(ElementUI )
+Vue.use(ElementUI)
+Vue.prototype.$message1000 = (message, type = 'success', duration = 1000) => { // 默认消息提示持续1S
+  ElementUI.Message({
+    message: message,
+    type,
+    duration
+  })
+}
 // 如果想要中文版 element-ui，按如下方式声明
 // Vue.use(ElementUI)
 
