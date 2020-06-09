@@ -13,7 +13,17 @@ export default {
     ...mapGetters([
       'name'
     ])
-  }
+  },
+  mounted() {
+
+  },
+  methods: {
+    handleData() {
+      fetch('./data.json').then(res=> res.json()).then(res=>{
+        console.log(res);
+      })
+    }
+  },
 }
 </script>
 

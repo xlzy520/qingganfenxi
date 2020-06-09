@@ -1,9 +1,13 @@
 <template>
   <div class="login-container">
+    <div class="bg-animation" v-if="canvas">
+      <canvas id="cvs_bg" width="1443" height="596" />
+      <canvas id="cvs_key" />
+    </div>
     <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" auto-complete="on" label-position="left">
 
       <div class="title-container">
-        <h3 class="title">Login Form</h3>
+        <h3 class="title">疫情情感分析</h3>
       </div>
 
       <el-form-item prop="username">
@@ -41,7 +45,7 @@
         </span>
       </el-form-item>
 
-      <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:30px;" @click.native.prevent="handleLogin">Login</el-button>
+      <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:30px;" @click.native.prevent="handleLogin">登录</el-button>
 
       <div class="tips">
         <span style="margin-right:20px;">username: admin</span>
@@ -54,6 +58,8 @@
 
 <script>
 import { validUsername } from '@/utils/validate'
+import { autoRun } from '@/utils/animation/keyDown'
+import { CanvasAnimate } from '@/utils/animation/canvasLogin'
 
 export default {
   name: 'Login',
@@ -83,7 +89,9 @@ export default {
       },
       loading: false,
       passwordType: 'password',
-      redirect: undefined
+      redirect: undefined,
+      canvas: true
+
     }
   },
   watch: {
@@ -93,6 +101,12 @@ export default {
       },
       immediate: true
     }
+  },
+  mounted() {
+    const canvasAnimate = new CanvasAnimate(document.getElementById('cvs_bg'),
+      { length: 100, clicked: true, moveon: true })
+    canvasAnimate.Run()
+    autoRun()
   },
   methods: {
     showPwd() {
@@ -121,6 +135,9 @@ export default {
         }
       })
     }
+  },
+  beforeDestroy() {
+    this.canvas = false
   }
 }
 </script>
@@ -132,6 +149,13 @@ export default {
 $bg:#283443;
 $light_gray:#fff;
 $cursor: #fff;
+
+#cvs_bg,#cvs_key{
+  position: absolute;
+}
+#cvs_bg{
+  z-index: 1
+}
 
 @supports (-webkit-mask: none) and (not (cater-color: $cursor)) {
   .login-container .el-input input {
@@ -190,6 +214,7 @@ $light_gray:#eee;
     padding: 160px 35px 0;
     margin: 0 auto;
     overflow: hidden;
+    z-index: 3;
   }
 
   .tips {
