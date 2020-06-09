@@ -1,6 +1,13 @@
 
 const state = {
-  allTask: [],
+  allTask: [
+    {
+      id: 1,
+      name: '无症状感染者',
+      saveDate: '2020-05-29 16:33:20',
+      status: true
+    }
+  ],
   taskData: []
 }
 

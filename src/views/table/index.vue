@@ -14,8 +14,15 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" icon="el-icon-search" @click="()=>fetchData(true)">查询</el-button>
-          <el-button type="success" @click="add">添加任务</el-button>
+          <div class="header-btns">
+            <el-button type="primary" icon="el-icon-search" @click="()=>fetchData(true)">查询</el-button>
+            <el-upload
+                accept=".csv,.xlsx,.xls"
+                :show-file-list="false"
+                class="upload-btn" action="" :on-error="add">
+              <el-button type="success">添加任务</el-button>
+            </el-upload>
+          </div>
         </el-form-item>
       </el-form>
     </div>
@@ -36,8 +43,11 @@
 <script>
 import { getList } from '@/api/table'
 import pagination from "@/mixins/pagination";
+import {mapGetters} from "vuex";
+import {parseTime} from '@/utils/index'
 
 export default {
+  name: 'TaskList',
   mixins: [pagination],
   filters: {
     statusFilter(status) {
@@ -48,6 +58,11 @@ export default {
       }
       return statusMap[status]
     }
+  },
+  computed: {
+    ...mapGetters([
+      'allTask'
+    ])
   },
   data() {
     return {
@@ -84,17 +99,28 @@ export default {
     this.fetchData()
   },
   methods: {
-    fetchData() {
+    fetchData(search) {
       this.loading = true
       getList().then(response => {
-        console.log(response);
-        this.tableData = response.data.items
+        if (search) {
+          this.$message1000('查询成功')
+        }
+        this.tableData = this.allTask
       }).finally(() => {
         this.loading = false
       })
     },
-    add(){
-
+    add(err, file, fileList){
+      const newAllTask = [...this.allTask, {
+        id: this.allTask.length + 1,
+        name: file.name,
+        saveDate: parseTime(Date.now()),
+        status: true
+      }]
+      this.$store.dispatch('task/change_all_task', newAllTask).then(()=>{
+        this.fetchData()
+      })
+      console.log(file);
     },
   }
 }
@@ -103,5 +129,11 @@ export default {
 <style lang="scss">
   .table-action{
     color: #20a0ff;
+  }
+  .header-btns{
+    display: flex;
+    .upload-btn{
+      margin-left: 30px;
+    }
   }
 </style>
