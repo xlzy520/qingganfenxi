@@ -1,12 +1,34 @@
 <template>
-  <div>
-    <div id="space"></div>
+  <div style="display: flex;flex-direction: column">
+    <div class="filter">
+      <label>日期选择</label>
+      <el-date-picker
+          v-model="date"
+          type="date"
+          value-format="yyyy/M/d"
+          @change="changeDate"
+          format="yyyy 年 MM 月 d 日"
+          :picker-options="pickerOptions"
+          placeholder="选择日期">
+      </el-date-picker>
+      <el-select v-model="type">
+        <el-option label="1">冷静</el-option>
+      </el-select>
+    </div>
+    <div style="display: flex">
+      <div id="space"></div>
+      <div id="gauge"></div>
+    </div>
   </div>
 </template>
 
 <script>
   import echarts from "echarts";
+  import china from 'echarts/map/json/china.json'
   import {mapGetters} from "vuex";
+  import dayjs from "dayjs";
+  // require('./china')
+  echarts.registerMap('china', china)
 
   export default {
     name: 'Space',
@@ -154,6 +176,13 @@
             value: 5
           }
         ],
+        date: '2020/1/28',
+        pickerOptions: {
+          disabledDate(time) {
+            return dayjs(time).isBefore('2020/1/28') || dayjs(time).isAfter('2020/2/29');
+          },
+        },
+        type: '冷静'
       }
     },
     computed: {
@@ -162,18 +191,45 @@
       ])
     },
     mounted() {
-      this.initChart()
+      this.initChart(this.date)
+      this.initGauge(this.date)
     },
     methods: {
-      initChart() {
+      handlePieData(date){
+        const result = {}
+        const datas = this.taskData
+        for (let i = 1; i < datas.length; i++) {
+          const item = datas[i]
+          const isToday = item['field4'].includes(date)
+          if (isToday) {
+            let area = result[item['field5']]
+            if (area !== undefined) {
+              result[item['field5']] += Number(item['field2'])
+            } else {
+              result[item['field5']] = 0
+            }
+          }
+        }
+        return result
+      },
+      initChart(date) {
+        const emotions = ['冷静','积极','焦虑','恐惧','愤怒(质疑)']
+        const countData = this.handlePieData(date)
+        const data = Object.keys(countData).map((province, index)=> {
+          return {
+            name: province,
+            value: countData[province]
+          }
+        })
         const chart = echarts.init(document.getElementById('space'));
         const option = {
           tooltip: {
-            triggerOn: "click",
+            // triggerOn: "click",
             formatter: function(e, t, n) {
-              return .5 == e.value ? e.name + "：有疑似病例" : e.seriesName + "<br />" + e.name + "：" + e.value
+              return e.seriesName + "<br />" + e.name + "：" + e.value
             }
           },
+          backgroundColor: '#fff',
           visualMap: {
             min: 0,
             max: 1000,
@@ -182,23 +238,23 @@
             showLabel: !0,
             text: ["高", "低"],
             pieces: [{
-              gt: 100,
-              label: "> 100 人",
+              gt: 200,
+              label: "> 200 ",
               color: "#7f1100"
             }, {
-              gte: 10,
-              lte: 100,
-              label: "10 - 100 人",
+              gte: 100,
+              lte: 200,
+              label: "100 - 200 ",
               color: "#ff5428"
             }, {
-              gte: 1,
-              lt: 10,
-              label: "1 - 9 人",
+              gte: 50,
+              lt: 100,
+              label: "50 - 100",
               color: "#ff8c71"
             }, {
-              gt: 0,
-              lt: 1,
-              label: "疑似",
+              gt: 1,
+              lt: 50,
+              label: "1 - 50",
               color: "#ffd768"
             }, {
               value: 0,
@@ -237,21 +293,250 @@
             }
           },
           series: [{
-            name: "确诊病例",
+            name: "情绪指数",
             type: "map",
             geoIndex: 0,
-            data: this.data
+            data: data
           }]
         };
         chart.setOption(option);
-      }
+      },
+      initGauge(date){
+        const chart = echarts.init(document.getElementById('gauge'));
+        var datas = {
+          value: 3,
+          title: "全国平均情绪指数",
+          type: 1,
+          radiusType: 1
+        };
+
+        var fontColor = "#ff5428";
+        var seriesName = "";
+        let noramlSize = 12;
+        let state = "";
+        let center = ["50%", "70%"];
+        let wqradius,
+          nqradius,
+          kdradius;
+
+        wqradius = "100%";
+        nqradius = "90%";
+        kdradius = "90%";
+
+        let wqColor = "rgba(80, 152, 237,0.9)";
+        let nqColor = [
+          [datas.value / 6, "#ff5428"],
+          [1, "#e6e6e6"]
+        ]
+
+        const option = {
+          title: {
+            show: true,
+            x: "center",
+            bottom: "2%",
+            text: datas.title,
+            textStyle: {
+              fontWeight: "700",
+              fontSize: 16,
+              color: fontColor
+            }
+          },
+          tooltip: {
+            show: false
+          },
+          series: [{
+            name: "刻度文字",
+            type: "gauge",
+            radius: kdradius,
+            center: center,
+            startAngle: 180,
+            endAngle: 0,
+            z: 7,
+            splitNumber: 6,
+            min: 0,
+            max: 6,
+            axisTick: {
+              show: true,
+              lineStyle: {
+                color: "#ffffff",
+                width: 1
+              },
+              length: 8,
+              splitNumber: 3
+            },
+            splitLine: {
+              show: false
+            },
+            axisLine: {
+              lineStyle: {
+                width: 25,
+                opacity: 0
+              }
+            },
+            axisLabel: {
+              fontSize: noramlSize,
+              color: fontColor,
+              formatter: function(v) {
+                var str = '';
+                switch (v) {
+                  case 0:
+                    str = '低';
+                    break;
+                  case 3:
+                    str = '中';
+                    break;
+                  case 6:
+                    str = '高';
+                    break;
+                }
+                return str;
+              },
+            },
+            pointer: {
+              show: false
+            },
+            detail: {
+              show: false
+            }
+          },
+            {
+              name: "指针",
+              type: "gauge",
+              z: 9,
+              radius: "90%",
+              startAngle: 180,
+              endAngle: 0,
+              center: center,
+              axisLine: {
+                lineStyle: {
+                  width: 0
+                }
+              },
+              axisTick: {
+                show: false
+              },
+              splitLine: {
+                show: false
+              },
+              axisLabel: {
+                show: false
+              },
+              min: 0,
+              max: 6,
+              pointer: {
+                show: true,
+                width: 10,
+                length: "60%"
+              },
+              itemStyle: {
+                normal: {
+                  color: wqColor
+                }
+              },
+              detail: {
+                show: true,
+                offsetCenter: [0, "40%"],
+                formatter: function(v) {
+                  var str = '';
+                  switch (v) {
+                    case 0:
+                      str = '0%';
+                      break;
+                    case 1:
+                      str = '30%';
+                      break;
+
+                    case 2:
+                      str = '60%';
+                      break;
+
+                    case 3:
+                      str = '90%';
+                      break;
+
+                    case 4:
+                      str = '100%';
+                      break;
+
+                    case 5:
+                      str = '竣工';
+                      break;
+                  }
+                  return [
+                    "{value|" + (str) + "} ",
+                    "{company|" + state + "}"
+                  ].join("\n");
+                },
+                rich: {
+                  value: {
+                    fontSize: 25,
+                    lineHeight: 10,
+                    color: "#1e87f0",
+                    fontWeight: "700"
+                  },
+                  company: {
+                    fontSize: 16,
+                    lineHeight: 20,
+                    color: "#1e87f0"
+                  }
+                }
+              },
+              data: [datas.value]
+            },
+            {
+              name: "内层盘",
+              type: "gauge",
+              z: 6,
+              radius: nqradius,
+              startAngle: 180,
+              endAngle: 0,
+              center: center,
+              axisLine: {
+                lineStyle: {
+                  color: nqColor,
+                  width: 25,
+                  opacity: 0.9
+                }
+              },
+              splitNumber: 6,
+              min: 0,
+              max: 5,
+              axisTick: {
+                show: false
+              },
+
+              axisLabel: {
+                show: false
+              },
+              pointer: {
+                show: false
+              },
+
+              detail: {
+                show: 0
+              }
+            }
+          ]
+        };
+        chart.setOption(option);
+      },
+      changeDate(value){
+        this.initChart(value)
+      },
     },
   }
 </script>
 
 <style lang="scss" scoped>
   #space {
-    width: 600px;
+    width: 800px;
+    height: 700px;
+  }
+  #gauge{
+    width: 400px;
     height: 300px;
+  }
+  .filter{
+
   }
 </style>
