@@ -11,6 +11,7 @@ NProgress.configure({ showSpinner: false }) // NProgress Configuration
 const whiteList = ['/login'] // no redirect whitelist
 
 router.beforeEach(async(to, from, next) => {
+  console.log(2);
   // start progress bar
   NProgress.start()
 
@@ -27,12 +28,17 @@ router.beforeEach(async(to, from, next) => {
       NProgress.done()
     } else {
       const hasGetUserInfo = store.getters.name
+      const taskData = store.getters.taskData
       if (hasGetUserInfo) {
         next()
       } else {
         try {
           // get user info
           await store.dispatch('user/getInfo')
+          await fetch('./data.json').then(res=> res.json()).then(async res=>{
+            await store.dispatch('task/change_task_data', res)
+            console.log(res);
+          })
 
           next()
         } catch (error) {

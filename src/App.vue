@@ -7,8 +7,8 @@
 <script>
 export default {
   name: 'App',
-  mounted() {
-    this.handleData()
+  created() {
+    // this.handleData()
   },
   methods: {
     handleData() {

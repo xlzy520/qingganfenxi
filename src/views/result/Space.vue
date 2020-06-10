@@ -6,14 +6,16 @@
           v-model="date"
           type="date"
           value-format="yyyy/M/d"
-          @change="changeDate"
           format="yyyy 年 MM 月 d 日"
           :picker-options="pickerOptions"
           placeholder="选择日期">
       </el-date-picker>
-      <el-select v-model="type">
-        <el-option label="1">冷静</el-option>
+      <el-select v-model="emotion">
+        <el-option :value="String(index)" :label="emotion"
+                   v-for="(emotion,index) in emotions" :key="emotion">{{emotion}}</el-option>
       </el-select>
+      <el-button @click="query">查询</el-button>
+      <el-button type="success" @click="exportExcel">导出数据</el-button>
     </div>
     <div style="display: flex">
       <div id="space"></div>
@@ -27,6 +29,7 @@
   import china from 'echarts/map/json/china.json'
   import {mapGetters} from "vuex";
   import dayjs from "dayjs";
+  import ExportJsonExcel from "js-export-excel";
   // require('./china')
   echarts.registerMap('china', china)
 
@@ -182,7 +185,8 @@
             return dayjs(time).isBefore('2020/1/28') || dayjs(time).isAfter('2020/2/29');
           },
         },
-        type: '冷静'
+        emotions: ['冷静','积极','焦虑','恐惧','愤怒(质疑)'],
+        emotion: '0'
       }
     },
     computed: {
@@ -191,20 +195,20 @@
       ])
     },
     mounted() {
-      this.initChart(this.date)
-      this.initGauge(this.date)
+      this.initChart(this.date, this.emotion)
+      this.initGauge(this.date, this.emotion)
     },
     methods: {
-      handlePieData(date){
+      handlePieData(date, emotion){
         const result = {}
         const datas = this.taskData
         for (let i = 1; i < datas.length; i++) {
           const item = datas[i]
           const isToday = item['field4'].includes(date)
-          if (isToday) {
+          if (isToday && item['field2'] === emotion) {
             let area = result[item['field5']]
             if (area !== undefined) {
-              result[item['field5']] += Number(item['field2'])
+              result[item['field5']] += 1
             } else {
               result[item['field5']] = 0
             }
@@ -212,9 +216,12 @@
         }
         return result
       },
-      initChart(date) {
+      handleMapData(){
+
+      },
+      initChart(date, emotion) {
         const emotions = ['冷静','积极','焦虑','恐惧','愤怒(质疑)']
-        const countData = this.handlePieData(date)
+        const countData = this.handlePieData(date, emotion)
         const data = Object.keys(countData).map((province, index)=> {
           return {
             name: province,
@@ -301,10 +308,22 @@
         };
         chart.setOption(option);
       },
-      initGauge(date){
+      initGauge(date, emotion){
         const chart = echarts.init(document.getElementById('gauge'));
+        const countData = this.handlePieData(date, emotion)
+        const data = Object.keys(countData).map((province, index)=> {
+          return {
+            name: province,
+            value: countData[province]
+          }
+        })
+        const count = data.reduce((cur, pre)=>{
+          return cur + pre.value
+        }, 0)
+        const average = count / data.length
+        console.log(average);
         var datas = {
-          value: 3,
+          value: average,
           title: "全国平均情绪指数",
           type: 1,
           radiusType: 1
@@ -322,10 +341,11 @@
         wqradius = "100%";
         nqradius = "90%";
         kdradius = "90%";
+        const colors = ['#37a2da','#32c5e9','#9fe6b8','#ffdb5c','#ff9f7f','#fb7293','#e7bcf3','#8378ea']
 
         let wqColor = "rgba(80, 152, 237,0.9)";
         let nqColor = [
-          [datas.value / 6, "#ff5428"],
+          [datas.value / 10, "#ff5428"],
           [1, "#e6e6e6"]
         ]
 
@@ -333,7 +353,7 @@
           title: {
             show: true,
             x: "center",
-            bottom: "2%",
+            bottom: "0%",
             text: datas.title,
             textStyle: {
               fontWeight: "700",
@@ -352,9 +372,9 @@
             startAngle: 180,
             endAngle: 0,
             z: 7,
-            splitNumber: 6,
+            splitNumber: 10,
             min: 0,
-            max: 6,
+            max: 100,
             axisTick: {
               show: true,
               lineStyle: {
@@ -378,15 +398,22 @@
               color: fontColor,
               formatter: function(v) {
                 var str = '';
+                console.log(v);
                 switch (v) {
                   case 0:
+                    str = '0';
+                    break;
+                  case 10:
                     str = '低';
                     break;
-                  case 3:
+                  case 50:
                     str = '中';
                     break;
-                  case 6:
+                  case 90:
                     str = '高';
+                    break;
+                  case 100:
+                    str = '100';
                     break;
                 }
                 return str;
@@ -422,7 +449,7 @@
                 show: false
               },
               min: 0,
-              max: 6,
+              max: 100,
               pointer: {
                 show: true,
                 width: 10,
@@ -437,47 +464,19 @@
                 show: true,
                 offsetCenter: [0, "40%"],
                 formatter: function(v) {
-                  var str = '';
-                  switch (v) {
-                    case 0:
-                      str = '0%';
-                      break;
-                    case 1:
-                      str = '30%';
-                      break;
-
-                    case 2:
-                      str = '60%';
-                      break;
-
-                    case 3:
-                      str = '90%';
-                      break;
-
-                    case 4:
-                      str = '100%';
-                      break;
-
-                    case 5:
-                      str = '竣工';
-                      break;
-                  }
-                  return [
-                    "{value|" + (str) + "} ",
-                    "{company|" + state + "}"
-                  ].join("\n");
+                  return "{value|" + (average.toFixed(2)) + "} ";
                 },
                 rich: {
                   value: {
                     fontSize: 25,
                     lineHeight: 10,
-                    color: "#1e87f0",
+                    color: "#ff5428",
                     fontWeight: "700"
                   },
                   company: {
                     fontSize: 16,
                     lineHeight: 20,
-                    color: "#1e87f0"
+                    color: "#ff5428"
                   }
                 }
               },
@@ -520,9 +519,45 @@
         };
         chart.setOption(option);
       },
-      changeDate(value){
-        this.initChart(value)
+      query(){
+        console.log(this.date, this.emotion);
+        this.initChart(this.date, this.emotion)
+        this.initGauge(this.date, this.emotion)
       },
+      exportExcel(){
+        const sheetData = []
+        const emotions = ['冷静','积极','焦虑','恐惧','愤怒(质疑)']
+        const countData = this.handlePieData(this.date, this.emotion)
+        const count = Object.values(countData).reduce((cur, pre)=>{
+          return cur + pre
+        }, 0)
+        const provinces = Object.keys(countData)
+        for (let j = 0; j < 2; j++) {
+          sheetData[j] = []
+          for (let i = 0; i < provinces.length; i++) {
+            if (j === 0) {
+              sheetData[j][i + 1] = countData[provinces[i]]
+            } else {
+              const rate = ((countData[provinces[i]] / count)*100).toFixed(2)
+              sheetData[j][i + 1] = `${rate}%`
+            }
+          }
+        }
+
+        console.log(sheetData);
+        const option = {}
+        option.fileName = this.date+emotions[this.emotion]
+
+        option.datas = [
+          {
+            sheetData: sheetData,
+            sheetHeader: provinces,
+            // columnWidths: provinces.map(v=>10)
+          }
+        ]
+        const toExcel = new ExportJsonExcel(option) // new
+        toExcel.saveExcel() // 保存
+      }
     },
   }
 </script>
