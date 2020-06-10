@@ -16,7 +16,7 @@ export default {
     ])
   },
   mounted() {
-    this.handleData()
+    // this.handleData()
   },
   methods: {
     handleData() {
