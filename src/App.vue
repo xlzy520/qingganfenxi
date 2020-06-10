@@ -6,6 +6,17 @@
 
 <script>
 export default {
-  name: 'App'
+  name: 'App',
+  mounted() {
+    this.handleData()
+  },
+  methods: {
+    handleData() {
+      fetch('./data.json').then(res=> res.json()).then(res=>{
+        this.$store.dispatch('task/change_task_data', res)
+        console.log(res);
+      })
+    }
+  },
 }
 </script>

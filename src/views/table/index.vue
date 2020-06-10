@@ -45,6 +45,8 @@ import { getList } from '@/api/table'
 import pagination from "@/mixins/pagination";
 import {mapGetters} from "vuex";
 import {parseTime} from '@/utils/index'
+import ExportJsonExcel from 'js-export-excel'
+import dayjs from "dayjs";
 
 export default {
   name: 'TaskList',
@@ -61,7 +63,8 @@ export default {
   },
   computed: {
     ...mapGetters([
-      'allTask'
+      'allTask',
+      'taskData'
     ])
   },
   data() {
@@ -120,8 +123,55 @@ export default {
       this.$store.dispatch('task/change_all_task', newAllTask).then(()=>{
         this.fetchData()
       })
-      console.log(file);
     },
+    handlePieData(date){
+      const result = {}
+      const datas = this.taskData
+      for (let i = 1; i < datas.length; i++) {
+        const item = datas[i]
+        const isToday = item['field4'].includes(date)
+        if (isToday) {
+          let itemCount = result[item['field2']]
+          if (itemCount !== undefined) {
+            result[item['field2']] += 1
+          } else {
+            result[item['field2']] = 0
+          }
+        }
+      }
+      return result
+    },
+
+    exportExcel(row){
+      const sheetData = []
+      const emotions = ['冷静','积极','焦虑','恐惧','愤怒(质疑)']
+      for (let i = 0; i < 32; i++) {
+        const date = dayjs('2020/1/28').add(i, 'day').format('YYYY/M/D')
+        const countData = this.handlePieData(date)
+        const count = Object.values(countData).reduce((cur, pre)=>{
+          return cur + pre
+        }, 0)
+        sheetData[i] = []
+        emotions.forEach((emotion, index)=> {
+          sheetData[i][0] = date
+          const rate = ((countData[index] / count)*100).toFixed(2)
+          sheetData[i][index + 1] = countData[index]+`(${rate}%)`
+        })
+      }
+      const option = {}
+      option.fileName = row.name
+
+      option.datas = [
+        {
+          sheetData: sheetData,
+          sheetHeader: ['日期','冷静','积极','焦虑','恐惧','愤怒(质疑)'],
+          columnWidths: [18, 18]
+        }
+      ]
+      const toExcel = new ExportJsonExcel(option) // new
+      toExcel.saveExcel() // 保存
+    }
+
   }
 }
 </script>
