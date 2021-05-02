@@ -151,20 +151,20 @@ export default {
   @import "../styles/pagination.scss";
   .base-table {
     width: 100%;
-    /deep/ .double-row {
+    ::v-deep .double-row {
       background-color: #f6fdf3;
     }
-    /deep/ .header-cell {
+    ::v-deep .header-cell {
       background-color: #f4f5fb;
     }
-    /deep/ .el-pager li {
+    ::v-deep .el-pager li {
       font-weight: lighter;
       border-radius: 2px;
       color: #4d4d4d;
       background: #f7f7f7;
       margin-left: 5px;
     }
-    /deep/ .header-row th{
+    ::v-deep .header-row th{
       background-color: #fafafa;
       color: rgba(0,0,0,.85);
       font-weight: 500;
